@@ -1,0 +1,46 @@
+name: Sincronizar con Dropbox
+
+on:
+  push:
+    branches:
+      - main  # o la rama que prefieras
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Clonar el repositorio
+      uses: actions/checkout@v2
+
+    - name: Instalar Python y Dropbox API
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-pip
+        pip3 install dropbox
+
+    - name: Subir archivos a Dropbox
+      env:
+        DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+      run: |
+        python3 <<'PY'
+        import dropbox
+        import os
+
+        # Autenticación en Dropbox
+        dbx = dropbox.Dropbox(os.getenv('DROPBOX_ACCESS_TOKEN'))
+
+        # Ruta local (tu repositorio)
+        local_path = './'
+
+        # Carpeta en Dropbox (cambia aquí el nombre)
+        dropbox_path = '/Minecraft/'
+
+        # Subir los archivos
+        for root, dirs, files in os.walk(local_path):
+            for file in files:
+                local_file = os.path.join(root, file)
+                dropbox_file = os.path.join(dropbox_path, os.path.relpath(local_file, local_path))
+                with open(local_file, 'rb') as f:
+                    dbx.files_upload(f.read(), dropbox_file, mode=dropbox.files.WriteMode.overwrite)
+        PY
